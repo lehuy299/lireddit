@@ -8,6 +8,9 @@ import { HelloResolver } from "./resolver/hello";
 import expressPlayground from 'graphql-playground-middleware-express';
 import { PostResolver } from "./resolver/post";
 import { UserResolver } from './resolver/user';
+import session from "express-session";
+import { createClient } from "redis";
+import connectRedis from "connect-redis";
 
 const main = async () => {;
     
@@ -15,6 +18,23 @@ const main = async () => {;
     await orm.getMigrator().up();
 
     const app = express();
+
+    const RedisStore = connectRedis(session);
+    const redisClient = createClient({ legacyMode: true });
+    redisClient.connect().catch(console.error);
+
+    app.use(
+        session({
+            name: 'qid',
+            store: new RedisStore({ 
+                client: redisClient as any 
+            }),
+            saveUninitialized: false,
+            secret: "gujhvugvutgjvfujuv",
+            resave: false,
+        })
+    );
+
 
     const apolloServer = new ApolloServer({
         schema: await buildSchema({
