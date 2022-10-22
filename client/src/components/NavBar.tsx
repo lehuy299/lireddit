@@ -27,7 +27,7 @@ export const NavBar: React.FC<NavBarProps> = ({}) => {
     } else {
         body = <Flex>
             <Box mr={2}>{data.me.username}</Box>
-            <Button isLoading={logoutFetching} onClick={() => { logout(); }} variant="link">logout</Button>
+            <Button isLoading={logoutFetching} onClick={() => { logout({}); }} variant="link">logout</Button>
         </Flex>
     }
 
