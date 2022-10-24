@@ -18,6 +18,8 @@ import { COOKIE_NAME } from "../constants";
 @InputType()
 class UsernamePasswordInput {
   @Field()
+  email: string;
+  @Field()
   username: string;
   @Field()
   password: string;
@@ -41,13 +43,22 @@ class UserResponse {
 
 @Resolver()
 export class UserResolver {
+
+  @Mutation(() => Boolean)
+  async forgotPassword(
+    @Arg('email') email: string,
+    @Ctx() { em }: MyContext
+  ) {
+    return true;
+  }
+
   @Query(() => User, { nullable: true })
   async me(@Ctx() { em, req }: MyContext) {
     if (!req.session.userId) {
       return null;
     }
-    const user = await em.findOne(User, { _id: req.session.userId });
-    return user;
+    //const user = await em.findOne(User, { _id: req.session.userId });
+    //return true;
   }
 
   @Mutation(() => UserResponse)
@@ -55,6 +66,16 @@ export class UserResolver {
     @Arg("options") options: UsernamePasswordInput,
     @Ctx() { req, em }: MyContext
   ): Promise<UserResponse> {
+    if (options.email.includes('@')) {
+      return {
+        errors: [
+          {
+            field: "email",
+            message: "invalid email",
+          },
+        ],
+      };
+    }
     if (options.username.length <= 2) {
       return {
         errors: [

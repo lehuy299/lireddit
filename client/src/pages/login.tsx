@@ -14,6 +14,8 @@ import {
   import { useLoginMutation } from "../generated/graphql";
   import { toErrorMap } from "../utils/toErrorMap";
   import { useRouter } from "next/router";
+import { withUrqlClient } from "next-urql";
+import { createUrqlClient } from "../utils/createUrqlClient";
   
   interface loginProps {}
   
@@ -63,5 +65,5 @@ import {
     );
   };
   
-  export default Login;
+  export default withUrqlClient(createUrqlClient)(Login);
   
