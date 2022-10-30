@@ -10,21 +10,18 @@ import expressPlayground from 'graphql-playground-middleware-express';
 import { PostResolver } from "./resolver/post";
 import { UserResolver } from './resolver/user';
 import session from "express-session";
-import { createClient } from "redis";
+import Redis from "ioredis";
 import connectRedis from "connect-redis";
 import { COOKIE_NAME, __prod__ } from './constants';
-import { sendEmail } from './utils/sendEmail';
 
 const main = async () => {;
-    sendEmail('tranhuulehuy@gmail.com', "hello there");
     const orm = await MikroORM.init(mikroConfig);
     await orm.getMigrator().up();
 
     const app = express();
 
     const RedisStore = connectRedis(session);
-    const redisClient = createClient({ legacyMode: true });
-    redisClient.connect().catch(console.error);
+    const redis = new Redis();
 
     app.use(cors({
         origin: 'http://localhost:3000',
@@ -35,7 +32,7 @@ const main = async () => {;
         session({
             name: COOKIE_NAME,
             store: new RedisStore({ 
-                client: redisClient as any,
+                client: redis as any,
                 disableTouch: true
             }),
             cookie: {
@@ -56,7 +53,7 @@ const main = async () => {;
             resolvers: [HelloResolver, PostResolver, UserResolver],
             validate: false,
         }),
-        context: ({ req, res }) => ({ em: orm.em, req, res })
+        context: ({ req, res }) => ({ em: orm.em, req, res, redis })
     });
     await apolloServer.start();
     apolloServer.applyMiddleware({ app, cors: false })
