@@ -1,22 +1,32 @@
-import 'reflect-metadata'
-import { MikroORM } from "@mikro-orm/core";
 import { ApolloServer } from "apollo-server-express";
-import express from "express";
+import connectRedis from "connect-redis";
 import cors from 'cors';
-import { buildSchema } from "type-graphql";
-import mikroConfig from "./mikro-orm.config";
-import { HelloResolver } from "./resolver/hello";
+import express from "express";
+import session from "express-session";
 import expressPlayground from 'graphql-playground-middleware-express';
+import Redis from "ioredis";
+import 'reflect-metadata';
+import { buildSchema } from "type-graphql";
+import { DataSource } from 'typeorm';
+import { COOKIE_NAME, __prod__ } from './constants';
+import { Post } from './entities/Post';
+import { User } from './entities/User';
+import { HelloResolver } from "./resolver/hello";
 import { PostResolver } from "./resolver/post";
 import { UserResolver } from './resolver/user';
-import session from "express-session";
-import Redis from "ioredis";
-import connectRedis from "connect-redis";
-import { COOKIE_NAME, __prod__ } from './constants';
 
-const main = async () => {;
-    const orm = await MikroORM.init(mikroConfig);
-    await orm.getMigrator().up();
+const main = async () => {
+
+    const conn = new DataSource({
+        type: 'postgres',
+        database: 'lireddit2',
+        username: 'postgres',
+        password: 'ngu123321',
+        logging: true,
+        synchronize: true,
+        entities: [Post, User]
+    });
+    conn.initialize();
 
     const app = express();
 
@@ -53,7 +63,7 @@ const main = async () => {;
             resolvers: [HelloResolver, PostResolver, UserResolver],
             validate: false,
         }),
-        context: ({ req, res }) => ({ em: orm.em, req, res, redis })
+        context: ({ req, res }) => ({ req, res, redis, conn })
     });
     await apolloServer.start();
     apolloServer.applyMiddleware({ app, cors: false })
