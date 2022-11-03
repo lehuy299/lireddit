@@ -2,6 +2,21 @@ import { cacheExchange } from "@urql/exchange-graphcache";
 import { dedupExchange, fetchExchange } from "urql";
 import { LoginMutation, LogoutMutation, MeDocument, MeQuery, RegisterMutation } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
+import { filter, pipe, tap } from 'wonka';
+import { Exchange } from 'urql';
+
+export const errorExchange: Exchange = ({ forward }) => ops$ => {
+  return pipe(
+    forward(ops$),
+    tap(({ error }) => {
+      // If the OperationResult has an error send a request to sentry
+      if (error) {
+        // the error is a CombinedError with networkError and graphqlErrors properties
+        sentryFireAndForgetHere() // Whatever error reporting you have
+      }
+    })
+  );
+};
 
 export const createUrqlClient = ((ssrExchange: any) => ({
     url: 'http://localhost:4000/graphql',
