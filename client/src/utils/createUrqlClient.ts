@@ -4,18 +4,17 @@ import { LoginMutation, LogoutMutation, MeDocument, MeQuery, RegisterMutation } 
 import { betterUpdateQuery } from "./betterUpdateQuery";
 import { filter, pipe, tap } from 'wonka';
 import { Exchange } from 'urql';
+import Router from "next/router";
 
 export const errorExchange: Exchange = ({ forward }) => ops$ => {
-  return pipe(
-    forward(ops$),
-    tap(({ error }) => {
-      // If the OperationResult has an error send a request to sentry
-      if (error) {
-        // the error is a CombinedError with networkError and graphqlErrors properties
-        sentryFireAndForgetHere() // Whatever error reporting you have
-      }
-    })
-  );
+    return pipe(
+        forward(ops$),
+        tap(({ error }) => {
+            if (error?.message.includes('not authenticated')) {
+                Router.push('/login');
+            }
+        })
+    );
 };
 
 export const createUrqlClient = ((ssrExchange: any) => ({
@@ -66,6 +65,9 @@ export const createUrqlClient = ((ssrExchange: any) => ({
                     },
                 }
             }
-        }), fetchExchange
+        }), 
+        errorExchange,
+        ssrExchange,
+        fetchExchange
     ]
 }))
