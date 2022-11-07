@@ -5,6 +5,7 @@ import express from "express";
 import session from "express-session";
 import expressPlayground from 'graphql-playground-middleware-express';
 import Redis from "ioredis";
+import path from "path";
 import 'reflect-metadata';
 import { buildSchema } from "type-graphql";
 import { DataSource } from 'typeorm';
@@ -24,9 +25,11 @@ const main = async () => {
         password: 'ngu123321',
         logging: true,
         synchronize: true,
+        migrations: [path.join(__dirname, './migrations/*')],
         entities: [Post, User]
     });
-    conn.initialize();
+    await conn.initialize();
+    await conn.runMigrations();
 
     const app = express();
 
