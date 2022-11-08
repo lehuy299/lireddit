@@ -1,5 +1,5 @@
-import { cacheExchange } from "@urql/exchange-graphcache";
-import { dedupExchange, fetchExchange } from "urql";
+import { cacheExchange, Resolver } from "@urql/exchange-graphcache";
+import { dedupExchange, fetchExchange, stringifyVariables } from "urql";
 import { LoginMutation, LogoutMutation, MeDocument, MeQuery, RegisterMutation } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
 import { filter, pipe, tap } from 'wonka';
@@ -17,6 +17,31 @@ export const errorExchange: Exchange = ({ forward }) => ops$ => {
     );
 };
 
+export const cursorPagination = (): Resolver => {
+    return (_parent, fieldArgs, cache, info) => {
+        const { parentKey: entityKey, fieldName } = info;
+        const allFields = cache.inspectFields(entityKey);
+        
+        const fieldInfos = allFields.filter(info => info.fieldName === fieldName);
+        const fieldKey = `${fieldName}(${stringifyVariables(fieldArgs)})`;
+        const isInCache = cache.resolve(entityKey, fieldKey);
+        info.partial = !!isInCache;
+
+        const size = fieldInfos.length;
+        if (size === 0) {
+            return undefined;
+        }
+
+        const results: string[] = [];
+        fieldInfos.forEach((fi) => {
+            const data = cache.resolve(entityKey, fi.fieldKey) as string[];
+            results.push(...data);
+            console.log('results',results);
+        });
+        return results;
+    };
+};
+
 export const createUrqlClient = ((ssrExchange: any) => ({
     url: 'http://localhost:4000/graphql',
     fetchOptions: {
@@ -25,6 +50,11 @@ export const createUrqlClient = ((ssrExchange: any) => ({
     exchanges: [
         dedupExchange,
         cacheExchange({
+            resolvers: {
+                Query: {
+                    posts: cursorPagination()
+                }
+            },
             updates: {
                 Mutation: {
                     logout: (_result, args, cache, info) => {
@@ -65,7 +95,7 @@ export const createUrqlClient = ((ssrExchange: any) => ({
                     },
                 }
             }
-        }), 
+        }),
         errorExchange,
         ssrExchange,
         fetchExchange
