@@ -25,7 +25,7 @@ export const cursorPagination = (): Resolver => {
         const fieldInfos = allFields.filter(info => info.fieldName === fieldName);
         const fieldKey = `${fieldName}(${stringifyVariables(fieldArgs)})`;
         const isInCache = cache.resolve(entityKey, fieldKey);
-        info.partial = !!isInCache;
+        info.partial = !isInCache;
 
         const size = fieldInfos.length;
         if (size === 0) {

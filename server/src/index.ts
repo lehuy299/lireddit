@@ -15,7 +15,7 @@ import { User } from './entities/User';
 import { HelloResolver } from "./resolver/hello";
 import { PostResolver } from "./resolver/post";
 import { UserResolver } from './resolver/user';
-
+//run
 const main = async () => {
 
     const conn = new DataSource({
@@ -24,7 +24,7 @@ const main = async () => {
         username: 'postgres',
         password: 'ngu123321',
         logging: true,
-        synchronize: true,
+        synchronize: false,
         migrations: [path.join(__dirname, './migrations/*')],
         entities: [Post, User]
     });
