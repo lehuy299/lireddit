@@ -35,18 +35,39 @@ export class PostResolver {
         @Ctx() { conn }: MyContext
       ): Promise<PaginatedPosts> {
         const realLimit = Math.min(50, limit);
-        const qb = conn
-          .getRepository(Post)
-          .createQueryBuilder("p")
-          .orderBy('"createdAt"', "DESC")
-          .take(realLimit + 1);
-    
+        const replacements: any[] = [realLimit + 1];
         if (cursor) {
-          qb.where('"createdAt" < :cursor', {
-            cursor: new Date(parseInt(cursor)),
-          });
+            replacements.push(cursor);
         }
-        const posts = await qb.getMany();
+
+        const posts = await conn.query(`
+            select p.*,
+            json_build_object(
+                '_id', u._id,
+                'username', u.username,
+                'email', u.email,
+                'createdAt', u."createdAt",
+                'updatedAt', u."updatedAt"
+            ) creator
+            from post p
+            inner join public.user u on u._id = p."creatorId"
+            ${cursor ? `where p."createdAt < $2` : ""}
+            order by p."createdAt" DESC
+            limit $1
+        `, replacements);
+        
+        // const qb = conn
+        //   .getRepository(Post)
+        //   .createQueryBuilder("p")
+        //   .orderBy('"createdAt"', "DESC")
+        //   .take(realLimit + 1);
+    
+        // if (cursor) {
+        //   qb.where('"createdAt" < :cursor', {
+        //     cursor: new Date(parseInt(cursor)),
+        //   });
+        // }
+        // const posts = await qb.getMany();
     
         return { posts: posts.slice(0, realLimit) , hasMore: posts.length === realLimit + 1 };
     }
