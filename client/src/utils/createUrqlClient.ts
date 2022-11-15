@@ -1,4 +1,4 @@
-import { cacheExchange, Resolver } from "@urql/exchange-graphcache";
+import { cacheExchange, Entity, Resolver } from "@urql/exchange-graphcache";
 import { dedupExchange, fetchExchange, stringifyVariables } from "urql";
 import { LoginMutation, LogoutMutation, MeDocument, MeQuery, RegisterMutation } from "../generated/graphql";
 import { betterUpdateQuery } from "./betterUpdateQuery";
@@ -24,21 +24,33 @@ export const cursorPagination = (): Resolver => {
         
         const fieldInfos = allFields.filter(info => info.fieldName === fieldName);
         const fieldKey = `${fieldName}(${stringifyVariables(fieldArgs)})`;
-        const isInCache = cache.resolve(entityKey, fieldKey);
+        const isInCache = cache.resolve(cache.resolve(entityKey, fieldKey) as Entity, 'posts');
+        console.log('isInCache',isInCache);
+        
         info.partial = !isInCache;
 
         const size = fieldInfos.length;
         if (size === 0) {
             return undefined;
         }
-
+        let hasMore = true;
         const results: string[] = [];
         fieldInfos.forEach((fi) => {
-            const data = cache.resolve(entityKey, fi.fieldKey) as string[];
+            const key = cache.resolve(entityKey, fi.fieldKey) as string;
+            const data = cache.resolve(key, 'posts') as string[];
+            const _hasMore = cache.resolve(key, 'hasMore');
+            if (!_hasMore) {
+                hasMore = _hasMore as boolean;
+            }
             results.push(...data);
-            console.log('results',results);
         });
-        return results;
+        console.log('results',results);
+        console.log('hasMore',hasMore);
+        return {
+            __typename: "PaginatedPosts",
+            hasMore,
+            posts: results
+        };
     };
 };
 
@@ -50,6 +62,9 @@ export const createUrqlClient = ((ssrExchange: any) => ({
     exchanges: [
         dedupExchange,
         cacheExchange({
+            keys: {
+                PaginatedPosts: () => null,
+            },
             resolvers: {
                 Query: {
                     posts: cursorPagination()
